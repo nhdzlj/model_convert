@@ -31,7 +31,7 @@ jobs:
 
     - name: Download ONNX model from URL
       run: |
-        wget https://raw.githubusercontent.com/nhdzlj/model_convert/master/yolov8n.onnx -O yolov8n.onnx
+        wget https://raw.githubusercontent.com/nhdzlj/model_convert/master/bc0.0.2.onnx -O bc.onnx
         # 如果下载失败，可以尝试添加更多的下载命令或重试逻辑
         # 例如：wget --tries=3 ... 或者使用curl等其他工具
 
@@ -41,11 +41,11 @@ jobs:
         SRC_PATH=$(pwd)
         mkdir -pv om
         # cp -vr ${SRC_PATH}/onnx_artifacts/*.onnx ./om/  # 原工作流中的复制命令，如果不需要从artifact下载，可以注释掉
-        cp -v yolov8n.onnx ./om/yolo.onnx  # 将下载的模型文件复制到工作目录
+        cp -v bc.onnx ./om/bc.onnx  # 将下载的模型文件复制到工作目录
         source /usr/local/Ascend/ascend-toolkit/set_env.sh
         export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/x86_64-linux/devlib/:$LD_LIBRARY_PATH
         cd om
-        atc --model=yolo.onnx --framework=5 --output=yolo --soc_version=Ascend310B4
+        atc --model=bc.onnx --framework=5 --output=yolo --soc_version=Ascend310B4
 
 
     - name: Upload artifact
