@@ -1,4 +1,4 @@
-name: Convert Yolo Seg Models
+name: Convert Yolo ShiBie Models
 
 # 触发工作流的事件
 on:
