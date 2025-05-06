@@ -31,6 +31,7 @@ jobs:
 
     - name: Download ONNX model from URL
       run: |
+        apt-get update && apt install -y --no-install-recommends wget
         wget https://raw.githubusercontent.com/nhdzlj/model_convert/master/bc0.0.2.onnx -O bc.onnx
         # 如果下载失败，可以尝试添加更多的下载命令或重试逻辑
         # 例如：wget --tries=3 ... 或者使用curl等其他工具
