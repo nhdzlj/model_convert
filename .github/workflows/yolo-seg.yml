@@ -34,7 +34,7 @@ jobs:
         cd yolo
         mkdir -pv onnx
         cd onnx
-        wget https://github.com/nhdzlj/model_convert/blob/master/yolov8n.pt -O yolo.pt
+        wget https://raw.githubusercontent.com/nhdzlj/model_convert/master/yolov8n.pt -O yolo.pt
         python ../export_seg_v11.pyc -w yolo.pt --sim
 
     - name: Upload artifact
