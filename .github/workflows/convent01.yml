@@ -1,0 +1,56 @@
+name: Convert Yolo nenya Models
+
+# 触发工作流的事件
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  onnx2om:
+    # needs: [pt2onnx]  # 如果不需要依赖之前的pt2onnx任务，可以注释掉这一行
+    strategy:
+      matrix:
+        runs-on: [ubuntu-22.04]
+    runs-on: ${{ matrix.runs-on }}
+    container:
+      image: kaylor/atc
+      options: --privileged
+
+    steps:
+    # - name: Download artifacts from pt2onnx
+    #   uses: actions/download-artifact@v4
+    #   with:
+    #     name: onnx_artifacts
+    #     path: onnx_artifacts
+
+    - name: Download ONNX model from URL
+      run: |
+        apt-get update && apt install -y --no-install-recommends wget
+        wget https://raw.githubusercontent.com/nhdzlj/model_convert/master/nenya.onnx -O bc.onnx
+        # 如果下载失败，可以尝试添加更多的下载命令或重试逻辑
+        # 例如：wget --tries=3 ... 或者使用curl等其他工具
+
+    - name: Run build script
+      shell: bash
+      run: |
+        SRC_PATH=$(pwd)
+        mkdir -pv om
+        # cp -vr ${SRC_PATH}/onnx_artifacts/*.onnx ./om/  # 原工作流中的复制命令，如果不需要从artifact下载，可以注释掉
+        cp -v bc.onnx ./om/bc.onnx  # 将下载的模型文件复制到工作目录
+        source /usr/local/Ascend/ascend-toolkit/set_env.sh
+        export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/x86_64-linux/devlib/:$LD_LIBRARY_PATH
+        cd om
+        atc --model=bc.onnx --framework=5 --output=yolo --soc_version=Ascend310B4 --input_shape="images:1,3,640,640"   	
+
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: om_artifacts
+        path: om/*.om
