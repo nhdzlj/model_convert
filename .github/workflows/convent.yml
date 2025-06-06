@@ -12,26 +12,67 @@ jobs:
   onnx2om:
     strategy:
       matrix:
-        runs-on: [ubuntu-18.04]  # 匹配文档推荐的操作系统
+        runs-on: [ubuntu-18.04]
     runs-on: ${{ matrix.runs-on }}
     container:
-      image: docker.mirrors.sjtug.sjtu.edu.cn/hispark/qiankunbp:1.0.0  # 官方昇腾开发镜像
+      image: docker.mirrors.sjtug.sjtu.edu.cn/hispark/qiankunbp:1.0.0
       options: --privileged
-
+      env:
+         REGISTRY_MIRRORS: https://12f1593272c94d11aa7cf51f4ba983ca.mirror.swr.myhuaweicloud.com
     steps:
-    - name: Download ONNX model
+    - name: Install dependencies
       run: |
-        apt-get update && apt install -y wget
-        wget --tries=3 https://raw.githubusercontent.com/nhdzlj/model_convert/master/orangeAll.onnx -O bc.onnx
+        apt-get update -y
+        apt-get install -y --no-install-recommends \
+          wget \
+          python3.7 \
+          python3-pip \
+          libprotobuf-dev \
+          protobuf-compiler
+        pip3 install --user protobuf==3.13.0 psutil==5.7.0
+
+    - name: Download ONNX model with retry and validation
+      run: |
+        # 下载重试逻辑
+        download_with_retry() {
+          local max_retries=5
+          local delay=30
+          for ((i=1; i<=$max_retries; i++)); do
+            wget -q --timeout=60 https://raw.githubusercontent.com/nhdzlj/model_convert/master/orangeAll.onnx -O bc.onnx
+            if [ $? -eq 0 ]; then
+              return 0
+            fi
+            sleep $delay
+          done
+          exit 1
+        }
+        download_with_retry
+
+        # 文件校验
+        if [ ! -f "bc.onnx" ] || [ $(stat -c%s "bc.onnx") -lt 100000000 ]; then
+          exit 1
+        fi
 
     - name: Convert ONNX to OM with ATC
       shell: bash
       run: |
-        source /usr/local/Ascend/ascend-toolkit/script/setenv.sh  # 加载 CANN 环境变量
-        atc --model=bc.onnx --framework=5 --output=./om/yolo --soc_version=Hi3519DV500 --input_shape="images:1,3,640,640"
+        source /usr/local/Ascend/ascend-toolkit/script/setenv.sh
+        ulimit -v 4000000
+        atc --model=bc.onnx --framework=5 --output=./om/yolo \
+            --soc_version=Hi3519DV500 --input_shape="images:1,3,640,640"
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
+        echo "ATC conversion completed successfully"
+        ls -l ./om/
+
+    - name: Organize output directory
+      run: |
+        mkdir -p /usr/local/Ascend/om_output
+        mv ./om/yolo.om /usr/local/Ascend/om_output/
 
     - name: Upload OM artifact
       uses: actions/upload-artifact@v4
       with:
         name: om_artifacts
-        path: om/*.om
+        path: /usr/local/Ascend/om_output/*.om
