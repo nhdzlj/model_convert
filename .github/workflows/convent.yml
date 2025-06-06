@@ -15,7 +15,7 @@ jobs:
         runs-on: [ubuntu-18.04]
     runs-on: ${{ matrix.runs-on }}
     container:
-      image: docker.mirrors.sjtug.sjtu.edu.cn/hispark/qiankunbp:1.0.0
+      image: hispark/qiankunbp:1.0.0
       options: --privileged
       env:
          REGISTRY_MIRRORS: https://12f1593272c94d11aa7cf51f4ba983ca.mirror.swr.myhuaweicloud.com
